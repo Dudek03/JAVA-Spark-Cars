@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>spark</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: sans-serif
+        }
+        body {
+            margin: 2rem 1rem
+        }
+        #table {margin: 2rem 0;
+            border-collapse:collapse
+        }
+        td {
+            border: 1px solid #000000;
+            padding: 0.8rem 1.2rem
+        }
+        button {
+            padding: 0.5rem;
+            background: none;
+            /*color: #111;*/
+            font-weight: 700;
+            outline: none;
+            border: 3px solid red;
+            border-radius: 0.5rem;
+           /* transition: 0.2s*/
+        }
+        /*button:hover {
+            cursor: pointer;
+            transform: scale(.9)
+        }*/
+        .edit {
+            border-color: green
+        }
+        #overlay button {
+            color: white;
+        }
+        #overlay {
+            display: flex;
+            flex-flow: column;
+            gap: 1rem;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0, 0.8)
+        }
+        #overlay input,#overlay select {
+            width:200px;
+            padding: 0.3rem 0.4rem;
+            border-radius: 0.5rem
+        }
+        a {
+            color: black;
+            text-decoration: none;
+            margin-right: 1.6rem;
+        }
+        a:visited {
+            color: black;
+            text-decoration: none;
+            margin-right: 1.6rem;
+        }
+        img {
+            max-width: 150px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>cars:</h1>
+    <section id="buttons">
+        <button id="generate-button">generuj auta</button>
+    </section>
+    <table id="table">
+
+    </table>
+    <a href="/">strona główna</a>
+    <a href="cars-pdf.html">samochody-pdf</a>
+    <div id="overlay">
+        <input id="model-edit" type="text" placeholder="nazwa">
+        <select id="year-edit">
+            <option>2000</option>
+            <option>2001</option>
+            <option>2002</option>
+            <option>2003</option>
+            <option>2004</option>
+            <option>2005</option>
+        </select>
+        <button id="edit-button">edytuj</button>
+    </div>
+    <script>
+
+        document.getElementById('overlay').style.display = 'none'
+
+        document.getElementById('generate-button').addEventListener('click', async () => {
+           await fetch('/generateCars')
+            document.getElementById('table').innerHTML = ''
+           await getData()
+        })
+
+
+        async function delCar(uuid) {
+
+            const res = await fetch('/del', {method: 'POST', body: JSON.stringify({uuid})})
+            if (!res.ok) return res.status
+
+            document.getElementById('table').innerHTML = ''
+            await getData()
+        }
+
+        function drawTable(data = null) {
+            if (!data) return
+            document.getElementById('table').innerHTML = ''
+
+            data.forEach(e => {
+                const tr = document.createElement('tr');
+
+                const id = document.createElement('td');
+                id.textContent = e.id
+                tr.appendChild(id)
+
+                const uuid = document.createElement('td');
+                uuid.textContent = e.uuid
+                tr.appendChild(uuid)
+
+                const model = document.createElement('td');
+                model.textContent = e.model
+                tr.appendChild(model)
+
+                const year = document.createElement('td');
+                year.textContent = e.year
+                tr.appendChild(year)
+
+                const price = document.createElement('td')
+                price.textContent = e.price
+                tr.appendChild(price)
+
+                const airbag = document.createElement('td');
+                e.airbag.forEach( d => {
+                    airbag.textContent += `${d.description}: ${d.value} \n`
+                })
+                tr.appendChild(airbag)
+
+                const color = document.createElement('td');
+                color.style.backgroundColor = e.color
+                tr.appendChild(color)
+
+                const image = document.createElement('td')
+                const innerimage = document.createElement('img')
+                innerimage.src = `/images/${e.image}`
+                image.appendChild(innerimage)
+                tr.appendChild(image)
+
+                const vat = document.createElement('td')
+                vat.textContent = e.vat
+                tr.appendChild(vat)
+
+                const date = document.createElement('td')
+                console.log(e)
+                //date.textContent = `${e.customDate.year}/${e.customDate.month}/${e.customDate.day}`
+                date.textContent = e.customDate
+                tr.appendChild(date)
+
+                const del = document.createElement('td')
+                const delButton = document.createElement('button')
+                delButton.textContent = 'delete'
+                delButton.addEventListener('click', () => delCar(e.uuid))
+                del.appendChild(delButton)
+                tr.appendChild(del)
+
+                const edit = document.createElement('td')
+                const editButton = document.createElement('button')
+                editButton.addEventListener('click', () => editCar(e.uuid));
+                editButton.classList.add('edit')
+                editButton.textContent = 'edit'
+                edit.appendChild(editButton)
+                tr.appendChild(edit)
+
+                const invoice = document.createElement('td')
+                const invoiceBtn = document.createElement('button')
+                invoiceBtn.addEventListener('click', () => generateInvoice(tr, e.uuid, e.year, e.color, e.model, e.airbag, e.image, e.customDate))
+                invoiceBtn.classList.add('invoice')
+                invoiceBtn.textContent = 'invoice'
+                invoice.appendChild(invoiceBtn)
+                tr.appendChild(invoice)
+
+
+                document.getElementById('table').appendChild(tr)
+            })
+        }
+
+        async function generateInvoice(obj, uuid, year, color, model, airbag, image, customDate) {
+            await fetch('/invoice', { method: 'post', body: JSON.stringify({"uuid": uuid, "year":year, "color": color, "model": model, "airbag": airbag, "image": image, "customDate": customDate})})
+
+            const td = document.createElement('td')
+            const a = document.createElement('a')
+            a.href = '/invoicedownload?uuid=' + uuid
+            a.textContent = 'download'
+            td.appendChild(a)
+            obj.appendChild(td)
+        }
+
+        async function editCar(uuid) {
+            let car = await fetch('/get', { method: 'post', body: JSON.stringify({uuid}) })
+            car = await car.json()
+
+            document.getElementById('model-edit').value = car.model
+            document.getElementById('year-edit').value = car.year
+
+            document.getElementById('overlay').style.display = 'flex'
+            document.getElementById('edit-button').addEventListener('click', () => endEdit(uuid))
+        }
+
+        async function endEdit(uuid) {
+
+            const res = await fetch('/edit', { method: 'POST', body: JSON.stringify({
+                    uuid: uuid,
+                    model: document.getElementById('model-edit').value,
+                    year: document.getElementById('year-edit').value
+            })});
+
+            if (!res.ok) console.log(res.status)
+
+            document.getElementById('table').innerHTML = ''
+            await getData()
+            document.getElementById('edit-button').removeEventListener('click', endEdit)
+            document.getElementById('overlay').style.display = 'none'
+        }
+
+        async function getData() {
+            const res = await fetch('/json')
+
+            if (!res.ok) return res.status
+
+            const data = await res.json()
+            console.log(data)
+            drawTable(data)
+        }
+
+        getData();
+    </script>
+</body>
+</html>

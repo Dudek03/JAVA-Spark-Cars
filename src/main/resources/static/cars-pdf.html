@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>spark</title>
+    <style>
+        * {
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            /*font-family:sans-serif*/
+        }
+        body {
+            margin: 2rem 1rem
+        }
+        #table {
+            margin: 2rem 0;
+            border-collapse:collapse
+        }
+        td {
+            border: 1px solid #000000;
+            padding: 0.8rem 1.2rem
+        }
+        button {
+            padding: 0.2rem;
+            background: none;
+            /*color: #111;*/
+            font-weight:500;
+            /*outline: none;*/
+            border: 2px solid red;
+            border-radius: 0.5rem;
+            margin-left: 0.6rem;
+           /* transition: 0.2s*/
+        }
+       /* button:hover {
+            cursor:pointer;
+            transform:scale(.9)
+        }*/
+        .edit {
+            border-color:teal
+        }
+       /* #overlay button {
+            color:#eee
+        }*/
+
+        a {
+            color: black;
+            text-decoration: none;
+            margin-right: 1.6rem;
+        }
+        a:visited {
+            color: black;
+            text-decoration: none;
+            margin-right: 1.6rem;
+        }
+
+        img {
+            max-width: 150px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <a href="/">index</a>
+    <a href="/cars.html">edit/update cars</a>
+<!--    <a href="#">generate invoice</a>-->
+<!--    <a href="#">search invoices</a>-->
+    <section id="buttons">
+        <button id="generateBtn">generuj losowo bazę samochodów</button><br>
+        <span>faktura za wszystkie samochody</span><button id="invoiceAll">generuj fakture</button>
+    </section>
+    <table id="table"> </table>
+    <div id="invoice-result"></div>
+    <script>
+
+        document.getElementById('generateBtn').addEventListener('click', async () => {
+            await fetch('/generateCars')
+            document.getElementById('table').innerHTML = ''
+            await getData()
+        })
+
+        document.getElementById('invoiceAll').addEventListener('click', async () => {
+            const res = await fetch('/invoiceall')
+            document.getElementById('invoice-result').innerHTML = ''
+            displayInvoiceResult(await res.text())
+        });
+
+        function displayInvoiceResult(id) {
+            const a = document.createElement('a')
+            a.href = '/invoicedownloadall?uuid=' + id
+            a.textContent = 'pobierz fakture'
+            document.getElementById('invoice-result').appendChild(a)
+        }
+
+
+        function drawTable(data = null) {
+            if (!data) return
+
+            data.forEach(e => {
+                const tr = document.createElement('tr')
+
+                const id = document.createElement('td')
+                id.textContent = e.id
+                tr.appendChild(id)
+
+                const uuid = document.createElement('td')
+                uuid.textContent = e.uuid
+                tr.appendChild(uuid)
+
+                const model = document.createElement('td')
+                model.textContent = e.model
+                tr.appendChild(model)
+
+                const year = document.createElement('td')
+                year.textContent = e.year
+                tr.appendChild(year)
+
+                const price = document.createElement('td')
+                price.textContent = e.price
+                tr.appendChild(price)
+
+                const airbag = document.createElement('td');
+                e.airbag.forEach( d => {
+                    airbag.textContent += `${d.description}: ${d.value} \n`
+                })
+                tr.appendChild(airbag)
+
+                const color = document.createElement('td')
+                color.style.backgroundColor = e.color
+                tr.appendChild(color)
+
+                const image = document.createElement('td')
+                const innerimage = document.createElement('img')
+                innerimage.src = `/images/${e.image}`
+                image.appendChild(innerimage)
+                tr.appendChild(image)
+
+                const vat = document.createElement('td')
+                vat.textContent = e.vat
+                tr.appendChild(vat)
+
+                const date = document.createElement('td')
+                console.log(e)
+                date.textContent = e.customDate
+                tr.appendChild(date)
+
+                document.getElementById('table').appendChild(tr)
+            })
+        }
+
+        async function getData() {
+            const res = await fetch('/json-pdf')
+
+            if (!res.ok) return res.status
+
+            const data = await res.json()
+            drawTable(data)
+        }
+
+        getData()
+    </script>
+</body>
+</html>
